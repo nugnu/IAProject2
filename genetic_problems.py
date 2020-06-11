@@ -107,7 +107,7 @@ class SudokuGeneticProblem(GeneticProblem):
 
         if (self.crossover_type == "one_point"):
             c = random.randrange(0, len(self.emptyArray))
-            pos = c[self.emptyArray]
+            pos = self.emptyArray[c]
             return x[:pos] + y[pos:]
 
         # TODO -> MORE crossover types 
