@@ -20,7 +20,7 @@ for initial in initials:
     print(len(initial))
 
 solutionsPath = os.path.join(cwd, "solutions/")
-defaultSolutionExtension = ".out"
+defaultSolutionExtension = ".sol"
 sols = glob(solutionsPath + "*" + defaultSolutionExtension)
 solutions = []
 for sol in sols:
