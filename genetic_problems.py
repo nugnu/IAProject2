@@ -7,7 +7,7 @@ class GeneticProblem:
    
     def __init__(self, initial=None, f_threshold=None, initial_population_size=30, 
     max_ngen=1000, mut_rate=0.2, crossover_rate=1, mut_type="swap", crossover_type="one_point",
-    selection_type = "tournament", replacement_type = "default"):
+    selection_type = "tournament", replacement_type = "default", init_type = "smart"):
         self.initial = initial
         self.f_threshold = f_threshold
         self.initial_population_size = initial_population_size
@@ -18,6 +18,7 @@ class GeneticProblem:
         self.crossover_type = crossover_type
         self.selection_type =  selection_type
         self.replacement_type = replacement_type
+        self.init_type = init_type
         self.population = []
 
     def fitness(self):
@@ -36,17 +37,22 @@ class GeneticProblem:
         raise NotImplementedError
 
     def mutate(self):
+        raise NotImplementedError 
+
+    def replace_population(self):
         raise NotImplementedError
     
 class SudokuGeneticProblem(GeneticProblem):
 
+    # GENERAL
+
     def __init__(self, initial, f_threshold=None, initial_population_size=1000,
     max_ngen=1000, mut_rate=0.2, crossover_rate=1, mut_type="swap", crossover_type="one_point",
-    selection_type = "tournament", replacement_type = "default"):
+    selection_type = "tournament", replacement_type = "default", init_type = "smart"):
         super().__init__(self, initial, f_threshold, initial_population_size, max_ngen, mut_rate,
-        crossover_rate, mut_type, crossover_type, selection_type, replacement_type)
+        crossover_rate, mut_type, crossover_type, selection_type, replacement_type, init_type)
         self.__SUDOKU_ARRAY_SIZE = 81
-        self.__MAX_FITNESS = 1000000 # best possible fitness value -> to be fixed 
+        self.__MAX_FITNESS = 27 # best possible fitness value 
         self.__MAX_SWAP = 10 # max possible swaps to be done on a single mutation
         self.__MAX_FLIP = 10 # max possible random gene change to be done on a single mutation
         self.gene_pool = range(1,10)
@@ -57,28 +63,8 @@ class SudokuGeneticProblem(GeneticProblem):
     def __initEmptyArray(self):
         return np.nonzero(self.initial == 0) # returns the indices of the zero elements on the sudoku puzzle
 
-    def __tournament(self, k):
-        competitors = []
-        for _ in range(k):            
-            pop_len = len(self.population)
-            c = random.randrange(pop_len)
-            competitors.append(population[c])
-        return max(competitors, key=self.fitness)
+    # GOAL TEST 
 
-    def fitness(self, individual): # TODO
-        return 1
-    
-    def init_population(self):
-        g = len(self.gene_pool)
-        for i in range(self.pop_number):
-            new_individual = []
-            for j in range(self.__SUDOKU_ARRAY_SIZE):
-                if (j not in self.emptyArray):
-                    new_individual[j] = self.initial[j]
-                else:
-                    new_individual[j] = self.gene_pool[random.randrange(0, g)]
-            self.population.append(new_individual)
-            
     def goal_test(self, individual):
         if (self.f_threshold != None):
             if (self.max_ngen != None):
@@ -91,6 +77,79 @@ class SudokuGeneticProblem(GeneticProblem):
             else:
                 return (fitness(individual) == self.__MAX_FITNESS)
 
+    # FITNESS
+
+    def _getRow(self, individual, i):
+        return individual[i:i+9]
+
+    def _getRows(self, individual):
+        return [ self._getRow(individual, i) for i in (range(9)*9) ]
+
+    def _getCol(self, individual, i):
+        return individual[i:(72+i+1):9]
+
+    def _getCols(self, individual):
+        return [self._getCol(individual,i) for i in range(9)]
+
+    def _getBox(self, individual, i):
+        return individual[i:i+3] + individual[i+9:i+12] + individual[i+18:i+21]
+
+    def _getBoxes(self, individual):
+        return [self._getBox(individual, i) for i in [0, 3, 6, 27, 30, 33, 54, 57, 60]]
+    
+    def fitness(self, individual):
+        return ( 
+            sum([9 - len(set(row)) for row in self.__getRows()]) +
+            sum([9 - len(set(col)) for col in self.__getCols()]) +
+            sum([9 - len(set(box)) for box in self.__getBoxes()]) 
+        )
+
+    # INIT POPULATION
+    
+    def init_population(self):
+        if (self.init_type == "smart"): # avoid placing numbers more or less than 9 times (may lead to premature convergence!)  
+            # every solution is a permutation of (1,2,3,4,5,6,7,8,9,1,2,3...)
+            permutation = []
+            for _ in range(9):
+                permutation += np.arange(1,10).tolist()
+            # as we only want to solve the sudoku using the empty (0) spaces, we remove ocurrences of
+            # non zero initial values from the permutation
+            for number in self.initial[self.initial != 0]:
+                permutation.remove(number)
+            # now for each individual, shuffle this permutation and fill the empty spaces with it
+            for i in range(self.pop_number):
+                random.shuffle(permutation)
+                permut_iterator = 0
+                new_individual = []
+                for j in range(self.__SUDOKU_ARRAY_SIZE):
+                    if (j not in self.emptyArray):
+                        new_individual[j] = self.initial[j]
+                    else:
+                        new_individual[j] = permutation[permut_iterator]
+                        permut_iterator += 1
+                self.population.append(new_individual)
+        
+        if (self.init_type == "random"):
+            g = len(self.gene_pool)
+            for i in range(self.pop_number):
+                new_individual = []
+                for j in range(self.__SUDOKU_ARRAY_SIZE):
+                    if (j not in self.emptyArray):
+                        new_individual[j] = self.initial[j]
+                    else:
+                        new_individual[j] = self.gene_pool[random.randrange(0, g)]
+                self.population.append(new_individual)
+            
+    # SELECTION
+    
+    def __tournament(self, k):
+        competitors = []
+        for _ in range(k):            
+            pop_len = len(self.population)
+            c = random.randrange(pop_len)
+            competitors.append(population[c])
+        return max(competitors, key=self.fitness)
+
     def selection(self, r):
         if (self.selection_type == "roulette"):
             fitnesses = map(self.fitness, self.population)
@@ -100,6 +159,8 @@ class SudokuGeneticProblem(GeneticProblem):
         if (self.selection_type == "tournament"):
             k = 3 # number of tournament competitors
             return [self.__tournament(k) for i in range(r)]
+
+    # RECOMBINATION
 
     def crossover(self, x, y): 
         if random.uniform(0, 1) >= self.crossover_rate:
@@ -113,6 +174,8 @@ class SudokuGeneticProblem(GeneticProblem):
         # TODO -> MORE crossover types 
         
         return x
+
+    # MUTATION
 
     def mutate(self, x):
         if random.uniform(0, 1) >= self.mut_rate:
@@ -157,6 +220,8 @@ class SudokuGeneticProblem(GeneticProblem):
         # TODO -> MORE mutation types 
 
         return x
+
+    # REPLACE POPULATION
 
     def replace_population(self, prev_fitness_individual=None):
         if (self.replacement_type == "default"):
