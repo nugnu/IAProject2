@@ -5,9 +5,9 @@ import numpy as np
 
 class GeneticProblem:
    
-    def __init__(self, initial=None, f_threshold=None, initial_population_size=200, 
-    max_ngen=1000, mut_rate=0.2, crossover_rate=1, mut_type="nswap", crossover_type="one_point",
-    selection_type = "tournament", replacement_type = "default", init_type = "smart"):
+    def __init__(self, initial=None, f_threshold=None, initial_population_size=1300, 
+    max_ngen=10000, mut_rate=0.25, crossover_rate=1, mut_type="nswap", crossover_type="one_point",
+    selection_type = "tournament", replacement_type = "elitism", init_type = "smart"):
         self.initial = initial
         self.f_threshold = f_threshold
         self.initial_population_size = initial_population_size
@@ -46,15 +46,15 @@ class SudokuGeneticProblem(GeneticProblem):
 
     # GENERAL
 
-    def __init__(self, initial, f_threshold=None, initial_population_size=1200,
-    max_ngen=1000, mut_rate=0.2, crossover_rate=1, mut_type="nswap", crossover_type="one_point",
+    def __init__(self, initial, f_threshold=None, initial_population_size=1100,
+    max_ngen=10000, mut_rate=0.2, crossover_rate=1, mut_type="swap", crossover_type="one_point",
     selection_type = "tournament", replacement_type = "default", init_type = "smart"):
         super().__init__(initial, f_threshold, initial_population_size, max_ngen, mut_rate,
         crossover_rate, mut_type, crossover_type, selection_type, replacement_type, init_type)
         self.__SUDOKU_ARRAY_SIZE = 81
         self.__MAX_FITNESS = 243 # best possible fitness value 
-        self.__MAX_SWAP = 3 # max possible swaps to be done on a single mutation
-        self.__MAX_FLIP = 3 # max possible random gene change to be done on a single mutation
+        self.__MAX_SWAP = 5 # max possible swaps to be done on a single mutation
+        self.__MAX_FLIP = 5 # max possible random gene change to be done on a single mutation
         self.gene_pool = range(1,10)
         self.gen = 0 
         self.population = []
