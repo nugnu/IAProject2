@@ -8,10 +8,11 @@ from genetic_problems import *
 # Genetic Algorithm
 
 def genetic_algorithm(problem):
-    MAX_STALE = 100
     DELTA = 5 # measure how far a population is far from the solution
+    MIN_GEN_ITERATIONS = 175
     problem.init_population()
     stale = 0
+    current_gen_iteration = 0
     while True:
         prev_fitness_individual = max(problem.population, key=problem.fitness)
         if (problem.goal_test(prev_fitness_individual)): 
@@ -22,15 +23,22 @@ def genetic_algorithm(problem):
         problem.replace_population(prev_fitness_individual) # replace the population and add the fittest of the previous generation to the new one 
         current_fitness_individual = max(problem.population, key = problem.fitness)
         
-        if (problem.fitness(prev_fitness_individual) == problem.fitness(current_fitness_individual)):
+        prev_best_fitness = problem.fitness(prev_fitness_individual)
+        current_best_fitness = problem.fitness(current_fitness_individual)
+        
+        KILL_PERCENT = 1
+        MAX_STALE = 150
+        if (current_best_fitness == prev_best_fitness):
             stale += 1
+            if (current_best_fitness < problem.MAX_FITNESS - DELTA and current_gen_iteration > MIN_GEN_ITERATIONS):
+                # bad population
+                MAX_STALE = 20
         else: stale = 0
 
         if (stale > MAX_STALE): 
-            KILL_PERCENT = 1
-            if (problem.fitness(current_fitness_individual) < problem.MAX_FITNESS - DELTA):
-                KILL_PERCENT = 1
             print("RE-SEEDING POPULATION\n")
             problem.stale_handler(KILL_PERCENT)
             stale = 0
+            current_gen_iteration = 0
         problem.gen += 1
+        current_gen_iteration += 1

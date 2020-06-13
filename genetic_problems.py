@@ -3,12 +3,13 @@ from collections import Counter
 from utils import *
 import numpy as np
 import copy 
+import nakedSingles as nks
 
 class GeneticProblem:
    
-    def __init__(self, initial=None, f_threshold=None, initial_population_size=1300, 
-    max_ngen=10000, mut_rate=0.25, crossover_rate=1, mut_type="nswap", crossover_type="one_point",
-    selection_type = "tournament", replacement_type = "elitism", init_type = "smart"):
+    def __init__(self, initial=None, f_threshold=None, initial_population_size=1, 
+    max_ngen=10000, mut_rate=0.25, crossover_rate=1, mut_type="all", crossover_type="all",
+    selection_type = "tournament", replacement_type = "all", init_type = "all"):
         self.initial = initial
         self.f_threshold = f_threshold
         self.initial_population_size = initial_population_size
@@ -47,7 +48,17 @@ class SudokuGeneticProblem(GeneticProblem):
 
     # GENERAL
 
-    def __init__(self, initial, f_threshold=None, initial_population_size=1200,
+    def __pre_processing(self):
+        self.initial.shape = (9,9)
+        self.initial = nks.nakedSingles(self.initial.tolist())
+        self.initial = np.array(self.initial)
+        self.initial.shape = (81)
+        return self.initial
+
+    def __initEmptyArray(self):
+        return list(np.nonzero(self.initial == 0)[0]) # returns the indices of the zero elements on the sudoku puzzle
+
+    def __init__(self, initial, f_threshold=None, initial_population_size=1000,
     max_ngen=10000, mut_rate=0.35, crossover_rate=1, mut_type="swap", crossover_type="one_point",
     selection_type = "tournament", replacement_type = "elitism", init_type = "permutation"):
         super().__init__(initial, f_threshold, initial_population_size, max_ngen, mut_rate,
@@ -59,10 +70,8 @@ class SudokuGeneticProblem(GeneticProblem):
         self.gene_pool = range(1,10)
         self.gen = 0 
         self.population = []
+        self.initial = self.__pre_processing()
         self.emptyArray = self.__initEmptyArray() # each position of this array keeps the position of an empty position on a sudoku puzzle 
-
-    def __initEmptyArray(self):
-        return list(np.nonzero(self.initial == 0)[0]) # returns the indices of the zero elements on the sudoku puzzle
 
     # GOAL TEST 
 
