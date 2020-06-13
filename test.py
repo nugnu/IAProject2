@@ -14,10 +14,10 @@ initials = []
 for puzzle in puzzles:
     initials.append(load_puzzle(puzzle))
 
-print(len(initials))
-for initial in initials:
-    print(initial)
-    print(len(initial))
+# print(len(initials))
+# for initial in initials:
+#     print(initial)
+#     print(len(initial))
 
 solutionsPath = os.path.join(cwd, "solutions/")
 defaultSolutionExtension = ".sol"
@@ -26,7 +26,11 @@ solutions = []
 for sol in sols:
     solutions.append(load_solution(sol))
 
-print(len(solutions))
-for solution in solutions:
-    print(solution)
-    print(len(solution))
+# print(len(solutions))
+# for solution in solutions:
+#     print(solution)
+#     print(len(solution))
+
+
+problem = SudokuGeneticProblem(initials[0])
+genetic_algorithm(problem)
