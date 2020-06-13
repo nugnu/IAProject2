@@ -70,7 +70,9 @@ class SudokuGeneticProblem(GeneticProblem):
         self.gene_pool = range(1,10)
         self.gen = 0 
         self.population = []
+        print("INITIAL PROBLEM:\n" + self.print_individual(self.initial) + "\n")
         self.initial = self.__pre_processing()
+        print("INITIAL PROBLEM AFTER NAKED_SINGLES PRE-PROCESSING:\n" + self.print_individual(self.initial) + "\n")
         self.emptyArray = self.__initEmptyArray() # each position of this array keeps the position of an empty position on a sudoku puzzle 
 
     # GOAL TEST 
