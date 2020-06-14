@@ -8,7 +8,7 @@ import nakedSingles as nks
 class GeneticProblem:
    
     def __init__(self, initial=None, f_threshold=None, initial_population_size=1, 
-    max_ngen=10000, mut_rate=0.25, crossover_rate=1, mut_type="all", crossover_type="all",
+    max_ngen=10000, mut_rate=0.4, crossover_rate=1, mut_type="all", crossover_type="all",
     selection_type = "tournament", replacement_type = "all", init_type = "all"):
         self.initial = initial
         self.f_threshold = f_threshold
@@ -118,8 +118,8 @@ class SudokuGeneticProblem(GeneticProblem):
             return True
         return False
 
-    def __init__(self, initial, f_threshold=None, initial_population_size=1500,
-    max_ngen=10000, mut_rate=0.3, crossover_rate=1, mut_type="horizontal_swap", crossover_type="vertical_two_point",
+    def __init__(self, initial, f_threshold=None, initial_population_size=1000,
+    max_ngen=10000, mut_rate=0.5, crossover_rate=1, mut_type="horizontal_swap", crossover_type="vertical_one_point",
     selection_type = "tournament", replacement_type = "elitism", init_type = "row_permutation"):
         super().__init__(initial, f_threshold, initial_population_size, max_ngen, mut_rate,
         crossover_rate, mut_type, crossover_type, selection_type, replacement_type, init_type)
@@ -364,7 +364,7 @@ class SudokuGeneticProblem(GeneticProblem):
 
     def __horizontal_nswap_mutate(self, x):
         # choose randomly which row its gonna pick to perform the swap
-        n = random.randrange(1, self._MAX_SWAP)
+        n = random.randrange(1, self.__MAX_SWAP)
         for _ in range(n):
             row = random.randrange(0,9)
             start_pos = np.searchsorted(self.emptyArray, 9*row) # the position on the empty array that the row starts
@@ -378,6 +378,9 @@ class SudokuGeneticProblem(GeneticProblem):
 
     def mutate(self, x):
         m = 5 # number of methods
+
+        if self.goal_test(x) == True: # dont mutate
+            return x
 
         if  random.uniform(0, 1) >= self.mut_rate or self.mut_type == None:
             return x

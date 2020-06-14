@@ -27,5 +27,6 @@ for puzzle in puzzles:
 #     solutions.append(load_solution(sol))
 
 
-problem = SudokuGeneticProblem(filename_initial_dict["s16"])
-genetic_algorithm(problem)
+problem = SudokuGeneticProblem(filename_initial_dict["s02b"])
+(solution, number_of_generations, time_spent) = genetic_algorithm(problem)
+print("NUMBER OF GENERATIONS: " + str(number_of_generations) + "\n" + "TIME SPENT: " + str(time_spent) + " seconds\n")
