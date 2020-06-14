@@ -37,7 +37,7 @@ def genetic_algorithm(problem, verbose=True):
         else: stale = 0
 
         if (stale > MAX_STALE): 
-            print("RE-SEEDING POPULATION\n")
+            if (verbose == True): print("RE-SEEDING POPULATION\n")
             problem.stale_handler(KILL_PERCENT)
             stale = 0
         problem.gen += 1
