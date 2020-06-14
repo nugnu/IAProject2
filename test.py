@@ -10,27 +10,22 @@ cwd = os.getcwd()
 puzzlesPath = os.path.join(cwd, "puzzles/")
 defaultPuzzleExtension = ".in"
 puzzles = glob(puzzlesPath + "*" + defaultPuzzleExtension)
-initials = []
+filename_initial_dict = {}
 for puzzle in puzzles:
-    initials.append(load_puzzle(puzzle))
+    basename = os.path.basename(puzzle)
+    filename = os.path.splitext(basename)[0]
+    filename_initial_dict.update( {
+            filename: load_puzzle(puzzle)
+        }
+    )
 
-# print(len(initials))
-# for initial in initials:
-#     print(initial)
-#     print(len(initial))
-
-solutionsPath = os.path.join(cwd, "solutions/")
-defaultSolutionExtension = ".sol"
-sols = glob(solutionsPath + "*" + defaultSolutionExtension)
-solutions = []
-for sol in sols:
-    solutions.append(load_solution(sol))
-
-# print(len(solutions))
-# for solution in solutions:
-#     print(solution)
-#     print(len(solution))
+# solutionsPath = os.path.join(cwd, "solutions/")
+# defaultSolutionExtension = ".sol"
+# sols = glob(solutionsPath + "*" + defaultSolutionExtension)
+# solutions = []
+# for sol in sols:
+#     solutions.append(load_solution(sol))
 
 
-problem = SudokuGeneticProblem(initials[10])
+problem = SudokuGeneticProblem(filename_initial_dict["s16"])
 genetic_algorithm(problem)
