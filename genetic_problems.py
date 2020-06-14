@@ -58,9 +58,14 @@ class SudokuGeneticProblem(GeneticProblem):
     def __initEmptyArray(self):
         return list(np.nonzero(self.initial == 0)[0]) # returns the indices of the zero elements on the sudoku puzzle
 
+    def __isRowPreserved(self):
+        if (self.mut_type == "horizontal" and self.crossover_type == "vertical" and self.init_type == "row_permutation"):
+            return True
+        return False
+
     def __init__(self, initial, f_threshold=None, initial_population_size=1000,
     max_ngen=10000, mut_rate=0.35, crossover_rate=1, mut_type="swap", crossover_type="one_point",
-    selection_type = "tournament", replacement_type = "elitism", init_type = "permutation"):
+    selection_type = "tournament", replacement_type = "elitism", init_type = "row_permutation"):
         super().__init__(initial, f_threshold, initial_population_size, max_ngen, mut_rate,
         crossover_rate, mut_type, crossover_type, selection_type, replacement_type, init_type)
         self.__SUDOKU_ARRAY_SIZE = 81
@@ -70,10 +75,11 @@ class SudokuGeneticProblem(GeneticProblem):
         self.gene_pool = range(1,10)
         self.gen = 0 
         self.population = []
-        print("INITIAL PROBLEM:\n" + self.print_individual(self.initial) + "\n")
+        print("INITIAL PROBLEM:\n" + self.to_string(self.initial) + "\n")
         self.initial = self.__pre_processing()
-        print("INITIAL PROBLEM AFTER NAKED_SINGLES PRE-PROCESSING:\n" + self.print_individual(self.initial) + "\n")
+        print("INITIAL PROBLEM AFTER NAKED_SINGLES PRE-PROCESSING:\n" + self.to_string(self.initial) + "\n")
         self.emptyArray = self.__initEmptyArray() # each position of this array keeps the position of an empty position on a sudoku puzzle 
+        self.row_preserved = self.__isRowPreserved()
 
     # GOAL TEST 
 
@@ -110,6 +116,12 @@ class SudokuGeneticProblem(GeneticProblem):
         return [self.__getBox(individual, i) for i in [0, 3, 6, 27, 30, 33, 54, 57, 60]]
     
     def fitness(self, individual):
+        if (self.row_preserved == True):
+            return (
+                sum([len(set(col)) for col in self.__getCols(individual)]) +
+                sum([len(set(box)) for box in self.__getBoxes(individual)]) +
+                81
+            )
         return ( 
             sum([len(set(row)) for row in self.__getRows(individual)]) +
             sum([len(set(col)) for col in self.__getCols(individual)]) +
@@ -140,6 +152,24 @@ class SudokuGeneticProblem(GeneticProblem):
                     permut_iterator += 1
             self.population.append(new_individual)
 
+    def __row_permutation_init(self): 
+        # it has a similar idea of __permutation_init(). But rows are guaranteed to have no duplicates 
+        for _ in range(self.initial_population_size):
+            new_individual = copy.deepcopy(self.initial)
+            row_iterator = 0
+            np_emptyArray = np.array(self.emptyArray)
+            for row in self.__getRows(self.initial):
+                permut_iterator = 0 
+                row_permutation = np.arange(1,10).tolist()
+                for number in row[row != 0]:
+                    row_permutation.remove(number)
+                random.shuffle(row_permutation)
+                for empty_pos in np_emptyArray[(np_emptyArray >= row_iterator) & (np_emptyArray <= row_iterator + 8)]:
+                    new_individual[empty_pos] = row_permutation[permut_iterator]
+                    permut_iterator += 1
+                row_iterator += 9
+            self.population.append(new_individual.tolist())
+
     def __random_init(self):
         g = len(self.gene_pool)
         for i in range(self.initial_population_size):
@@ -152,15 +182,19 @@ class SudokuGeneticProblem(GeneticProblem):
             self.population.append(new_individual)
     
     def init_population(self):
-        m = 2 # number of methods
+        m = 3 # number of methods
         function_dict = {
             0: self.__random_init,
-            1: self.__permutation_init
+            1: self.__permutation_init,
+            2: self.__row_permutation_init
         }
 
         if (self.init_type == "all"):
             c = random.randrange(0, m)
             function_dict[c]()
+
+        if (self.init_type == "row_permutation"):
+            self.__row_permutation_init()
 
         if (self.init_type == "permutation"): # avoid placing numbers more or less than 9 times (may lead to premature convergence!)  
             self.__permutation_init()
@@ -335,7 +369,7 @@ class SudokuGeneticProblem(GeneticProblem):
   
     # DISPLAY
 
-    def print_individual(self, individual):
+    def to_string(self, individual):
         np_individual = np.array(individual)
         np_individual.shape = (9,9)
         return str(np_individual)
