@@ -45,9 +45,57 @@ class GeneticProblem:
         raise NotImplementedError
     
 class SudokuGeneticProblem(GeneticProblem):
+   
+    # INIT 
 
-    # GENERAL
+    def __get_init_dict(self):
+        return {
+            "random": self.__random_init,
+            0: self.__random_init,
+            "permutation": self.__permutation_init,
+            1: self.__permutation_init,
+            "row_permutation": self.__row_permutation_init,
+            2: self.__row_permutation_init
+        }
 
+    def __get_crossover_dict(self):
+        return {
+            0: self.__one_point_crossover,
+            "one_point": self.__one_point_crossover,
+            1: self.__vertical_two_point_crossover,
+            "vertical": self.__vertical_two_point_crossover
+        }
+
+    def __get_selection_dict(self):
+        return {
+            0: self.__tournament,
+            "tournament": self.__tournament,
+            1: self.__roulette,
+            "roulette": self.__roulette
+        }
+
+    def __get_replacement_dict(self):
+        return {
+            "default": self.__default_replace,
+            0: self.__default_replace,
+            "elitism": self.__elitism_replace,
+            1: self.__elitism_replace
+        }
+
+    def __get_mutation_dict(self):
+        return {
+            "flip": self.__flip_mutate,
+            0: self.__flip_mutate,
+            "nflip": self.__nflip_mutate,
+            1: self.__nflip_mutate,
+            "swap": self.__swap_mutate,
+            2: self.__swap_mutate,
+            "nswap": self.__nswap_mutate,
+            3: self.__nswap_mutate,
+            "horizontal_swap": self.__horizontal_swap_mutate,
+            4: self.__horizontal_swap_mutate
+        }
+    
     def __pre_processing(self):
         self.initial.shape = (9,9)
         self.initial = nks.nakedSingles(self.initial.tolist())
@@ -56,21 +104,26 @@ class SudokuGeneticProblem(GeneticProblem):
         return self.initial
 
     def __initEmptyArray(self):
-        return list(np.nonzero(self.initial == 0)[0]) # returns the indices of the zero elements on the sudoku puzzle
+        return np.sort(np.array(np.nonzero(self.initial == 0)[0])) # returns the indices of the zero elements on the sudoku puzzle
 
     def __isRowPreserved(self):
-        if (self.mut_type == "horizontal" and self.crossover_type == "vertical" and self.init_type == "row_permutation"):
+        if (self.mut_type == "horizontal_swap" and self.crossover_type == "vertical" and self.init_type == "row_permutation"):
             return True
         return False
 
     def __init__(self, initial, f_threshold=None, initial_population_size=1000,
-    max_ngen=10000, mut_rate=0.35, crossover_rate=1, mut_type="swap", crossover_type="one_point",
+    max_ngen=10000, mut_rate=0.35, crossover_rate=1, mut_type="horizontal_swap", crossover_type="vertical",
     selection_type = "tournament", replacement_type = "elitism", init_type = "row_permutation"):
         super().__init__(initial, f_threshold, initial_population_size, max_ngen, mut_rate,
         crossover_rate, mut_type, crossover_type, selection_type, replacement_type, init_type)
         self.__SUDOKU_ARRAY_SIZE = 81
         self.__MAX_SWAP = 3 # max possible swaps to be done on a single mutation
         self.__MAX_FLIP = 3  # max possible random gene change to be done on a single mutation
+        self.init_dict = self.__get_init_dict()
+        self.selection_dict = self.__get_selection_dict()
+        self.crossover_dict = self.__get_crossover_dict()
+        self.replacement_dict = self.__get_replacement_dict()
+        self.mutation_dict = self.__get_mutation_dict()
         self.MAX_FITNESS = 243 # best possible fitness value 
         self.gene_pool = range(1,10)
         self.gen = 0 
@@ -183,28 +236,20 @@ class SudokuGeneticProblem(GeneticProblem):
     
     def init_population(self):
         m = 3 # number of methods
-        function_dict = {
-            0: self.__random_init,
-            1: self.__permutation_init,
-            2: self.__row_permutation_init
-        }
 
         if (self.init_type == "all"):
             c = random.randrange(0, m)
-            function_dict[c]()
+            self.init_dict[c]()
 
-        if (self.init_type == "row_permutation"):
-            self.__row_permutation_init()
-
-        if (self.init_type == "permutation"): # avoid placing numbers more or less than 9 times (may lead to premature convergence!)  
-            self.__permutation_init()
-        
-        if (self.init_type == "random"):
-            self.__random_init()
+        return self.init_dict[self.init_type]()
             
     # SELECTION
     
-    def __tournament(self, k):
+    def __tournament(self, r):
+        k = 2
+        return [self.__tournament_util(k) for i in range(r)]
+
+    def __tournament_util(self, k):
         competitors = []
         for _ in range(k):            
             pop_len = len(self.population)
@@ -212,15 +257,19 @@ class SudokuGeneticProblem(GeneticProblem):
             competitors.append(self.population[c])
         return max(competitors, key=self.fitness)
 
+    def __roulette(self, r):
+        fitnesses = map(self.fitness, self.population)
+        sampler = weighted_sampler(self.population, fitnesses)
+        return [sampler() for i in range(r)]
+
     def selection(self, r):
-        if (self.selection_type == "roulette"):
-            fitnesses = map(self.fitness, self.population)
-            sampler = weighted_sampler(self.population, fitnesses)
-            return [sampler() for i in range(r)]
+        m = 2 # number of methods
+
+        if (self.selection_type == "all"):
+            c = random.randrange(0, m)
+            return self.selection_dict[c](r)
         
-        if (self.selection_type == "tournament"):
-            k = 2 # number of tournament competitors
-            return [self.__tournament(k) for i in range(r)]
+        return self.selection_dict[self.selection_type](r)
 
     # RECOMBINATION
 
@@ -229,26 +278,25 @@ class SudokuGeneticProblem(GeneticProblem):
         pos = self.emptyArray[c]
         return x[:pos] + y[pos:]
 
-    def crossover(self, x, y): 
-        m = 1 # number of methods
-        function_dict = {
-            0: self.__one_point_crossover
-        }
+    def __vertical_two_point_crossover(self, x, y):
+        crossover_point1 = random.randint(0, 8)
+        crossover_point2 = random.randint(crossover_point1 + 1, 9)
+        crossover_point1 = crossover_point1*9
+        crossover_point2 = crossover_point2*9
+        return x[:crossover_point1] + y[crossover_point1:crossover_point2] + y[crossover_point2:]
 
-        if random.uniform(0, 1) >= self.crossover_rate:
+    def crossover(self, x, y): 
+        m = 2 # number of methods
+
+        if random.uniform(0, 1) >= self.crossover_rate or self.crossover_type == None:
             return x # returns a individual from the current generation without doing the crossover 
 
         if (self.crossover_type == "all"):
             c = random.randrange(0, m)
-            return function_dict[c](x, y)
+            return self.crossover_dict[c](x, y)
 
-        if (self.crossover_type == "one_point"):
-            return self.__one_point_crossover(x, y)
-            
-        # TODO -> MORE crossover types 
-        
-        return x
-
+        return self.crossover_dict[self.crossover_type](x, y)
+                    
     # MUTATION
 
     def __flip_mutate(self, x):
@@ -287,37 +335,29 @@ class SudokuGeneticProblem(GeneticProblem):
             x[self.emptyArray[c2]] = tmp
         return x
 
-    def mutate(self, x):
-        m = 4 # number of methods
-        function_dict = {
-            0: self.__flip_mutate,
-            1: self.__nflip_mutate,
-            2: self.__swap_mutate,
-            3: self.__nswap_mutate
-        }
+    def __horizontal_swap_mutate(self, x):
+        # choose randomly which row its gonna pick to perform the swap
+        row = random.randrange(0,9)
+        start_pos = np.searchsorted(self.emptyArray, 9*row) # the position on the empty array that the row starts
+        end_pos = np.searchsorted(self.emptyArray, 9*row + 9) # the position on the empty array that the row ends
+        c1 = random.randrange(start_pos, end_pos)
+        c2 = random.randrange(start_pos, end_pos)
+        tmp = x[self.emptyArray[c1]]
+        x[self.emptyArray[c1]] = x[self.emptyArray[c2]]
+        x[self.emptyArray[c2]] = tmp
+        return x
 
-        if  random.uniform(0, 1) >= self.mut_rate:
+    def mutate(self, x):
+        m = 5 # number of methods
+
+        if  random.uniform(0, 1) >= self.mut_rate or self.mut_type == None:
             return x
 
-        if (self.mut_type == "all"):
+        if  (self.mut_type == "all"):
             c = random.randrange(0, m)
-            return function_dict[c](x)
-
-        if (self.mut_type == "flip"): # changes a random gene from the individual
-            return self.__flip_mutate(x)
-
-        if (self.mut_type == "nflip"): # perform n (1 up to __MAX_FLIP) flips    
-            return self.__nflip_mutate(x)
-
-        if (self.mut_type == "swap"): # swap two genes from the individual
-            return self.__swap_mutate(x)
-
-        if (self.mut_type == "nswap"): # performs swap n (1 up to __MAX_SWAP) times 
-            return self.__nswap_mutate(x)
-
-        # TODO -> MORE mutation types 
-
-        return x
+            return self.mutation_dict[c](x)
+        
+        return self.mutation_dict[self.mut_type](x)
 
     # REPLACE POPULATION
 
@@ -342,20 +382,12 @@ class SudokuGeneticProblem(GeneticProblem):
 
     def replace_population(self, prev_fitness_individual=None):
         m = 2 # number of methods
-        function_dict = {
-            0: self.__default_replace,
-            1: self.__elitism_replace
-        }
 
-        if (self.replacement_type == "all"):
+        if  (self.replacement_type == "all"):
             c = random.randrange(0, m)
-            function_dict[c](prev_fitness_individual)
-
-        if (self.replacement_type == "default"):
-            self.__default_replace(prev_fitness_individual)
-
-        if (self.replacement_type == "elitism"):
-            self.__elitism_replace(prev_fitness_individual)
+            return self.replacement_dict[c](prev_fitness_individual)
+        
+        return self.replacement_dict[self.replacement_type](prev_fitness_individual)
            
     # STALE
 
