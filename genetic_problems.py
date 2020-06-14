@@ -249,8 +249,9 @@ class SudokuGeneticProblem(GeneticProblem):
         if (self.init_type == "all"):
             c = random.randrange(0, m)
             self.init_dict[c]()
+            return 
 
-        return self.init_dict[self.init_type]()
+        self.init_dict[self.init_type]()
             
     # SELECTION
     
