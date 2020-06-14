@@ -120,7 +120,7 @@ class SudokuGeneticProblem(GeneticProblem):
 
     def __init__(self, initial, f_threshold=None, initial_population_size=1000,
     max_ngen=10000, mut_rate=0.5, crossover_rate=1, mut_type="horizontal_swap", crossover_type="vertical_one_point",
-    selection_type = "tournament", replacement_type = "elitism", init_type = "row_permutation"):
+    selection_type = "tournament", replacement_type = "elitism", init_type = "row_permutation", verbose=True):
         super().__init__(initial, f_threshold, initial_population_size, max_ngen, mut_rate,
         crossover_rate, mut_type, crossover_type, selection_type, replacement_type, init_type)
         self.__SUDOKU_ARRAY_SIZE = 81
@@ -135,9 +135,9 @@ class SudokuGeneticProblem(GeneticProblem):
         self.gene_pool = range(1,10)
         self.gen = 0 
         self.population = []
-        print("INITIAL PROBLEM:\n" + self.to_string(self.initial) + "\n")
+        if (verbose == True): print("INITIAL PROBLEM:\n" + self.to_string(self.initial) + "\n")
         self.initial = self.__pre_processing()
-        print("INITIAL PROBLEM AFTER NAKED_SINGLES PRE-PROCESSING:\n" + self.to_string(self.initial) + "\n")
+        if (verbose == True): print("INITIAL PROBLEM AFTER NAKED_SINGLES PRE-PROCESSING:\n" + self.to_string(self.initial) + "\n")
         self.emptyArray = self.__initEmptyArray() # each position of this array keeps the position of an empty position on a sudoku puzzle 
         self.row_preserved = self.__isRowPreserved()
 
