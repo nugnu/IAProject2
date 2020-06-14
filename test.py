@@ -32,5 +32,5 @@ for sol in sols:
 #     print(len(solution))
 
 
-problem = SudokuGeneticProblem(initials[0])
+problem = SudokuGeneticProblem(initials[10])
 genetic_algorithm(problem)

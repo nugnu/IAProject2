@@ -63,7 +63,10 @@ class SudokuGeneticProblem(GeneticProblem):
             0: self.__one_point_crossover,
             "one_point": self.__one_point_crossover,
             1: self.__vertical_two_point_crossover,
-            "vertical": self.__vertical_two_point_crossover
+            "vertical_two_point": self.__vertical_two_point_crossover,
+            2: self.__vertical_one_point_crossover,
+            "vertical_one_point":   self.__vertical_one_point_crossover,
+            3: self.__vertical_one_point_crossover
         }
 
     def __get_selection_dict(self):
@@ -93,7 +96,9 @@ class SudokuGeneticProblem(GeneticProblem):
             "nswap": self.__nswap_mutate,
             3: self.__nswap_mutate,
             "horizontal_swap": self.__horizontal_swap_mutate,
-            4: self.__horizontal_swap_mutate
+            4: self.__horizontal_swap_mutate,
+            "horizontal_nswap": self.__horizontal_nswap_mutate,
+            5: self.__horizontal_nswap_mutate
         }
     
     def __pre_processing(self):
@@ -107,12 +112,14 @@ class SudokuGeneticProblem(GeneticProblem):
         return np.sort(np.array(np.nonzero(self.initial == 0)[0])) # returns the indices of the zero elements on the sudoku puzzle
 
     def __isRowPreserved(self):
-        if (self.mut_type == "horizontal_swap" and self.crossover_type == "vertical" and self.init_type == "row_permutation"):
+        if ((self.mut_type == "horizontal_swap" or self.mut_type == "horizontal_nswap") and 
+        (self.crossover_type == "vertical_two_point" or self.crossover_type == "vertical_one_point") and
+        (self.init_type == "row_permutation")) :
             return True
         return False
 
-    def __init__(self, initial, f_threshold=None, initial_population_size=1000,
-    max_ngen=10000, mut_rate=0.35, crossover_rate=1, mut_type="horizontal_swap", crossover_type="vertical",
+    def __init__(self, initial, f_threshold=None, initial_population_size=1500,
+    max_ngen=10000, mut_rate=0.3, crossover_rate=1, mut_type="horizontal_swap", crossover_type="vertical_two_point",
     selection_type = "tournament", replacement_type = "elitism", init_type = "row_permutation"):
         super().__init__(initial, f_threshold, initial_population_size, max_ngen, mut_rate,
         crossover_rate, mut_type, crossover_type, selection_type, replacement_type, init_type)
@@ -134,21 +141,7 @@ class SudokuGeneticProblem(GeneticProblem):
         self.emptyArray = self.__initEmptyArray() # each position of this array keeps the position of an empty position on a sudoku puzzle 
         self.row_preserved = self.__isRowPreserved()
 
-    # GOAL TEST 
-
-    def goal_test(self, individual):
-        if (self.f_threshold != None):
-            if (self.max_ngen != None):
-                return (self.gen == self.max_ngen or self.fitness(individual) >= self.f_threshold)
-            else:
-                return (self.fitness(individual) >= self.f_threshold)
-        else: # no threshold -> its expecting an actual solution (best possible fitness)
-            if (self.max_ngen != None):
-                return (self.gen == self.max_ngen or self.fitness(individual) == self.MAX_FITNESS)
-            else:
-                return (self.fitness(individual) == self.MAX_FITNESS)
-
-    # FITNESS
+    # GENERAL   
 
     def __getRow(self, individual, i):
         return individual[i:i+9]
@@ -167,7 +160,23 @@ class SudokuGeneticProblem(GeneticProblem):
 
     def __getBoxes(self, individual):
         return [self.__getBox(individual, i) for i in [0, 3, 6, 27, 30, 33, 54, 57, 60]]
+
+    # GOAL TEST 
+
+    def goal_test(self, individual):
+        if (self.f_threshold != None):
+            if (self.max_ngen != None):
+                return (self.gen == self.max_ngen or self.fitness(individual) >= self.f_threshold)
+            else:
+                return (self.fitness(individual) >= self.f_threshold)
+        else: # no threshold -> its expecting an actual solution (best possible fitness)
+            if (self.max_ngen != None):
+                return (self.gen == self.max_ngen or self.fitness(individual) == self.MAX_FITNESS)
+            else:
+                return (self.fitness(individual) == self.MAX_FITNESS)
     
+    # FITNESS
+   
     def fitness(self, individual):
         if (self.row_preserved == True):
             return (
@@ -278,15 +287,21 @@ class SudokuGeneticProblem(GeneticProblem):
         pos = self.emptyArray[c]
         return x[:pos] + y[pos:]
 
+    # vertical crossovers preserve rows
+
+    def __vertical_one_point_crossover(self, x, y):
+        crossover_point = random.randint(0,9) * 9
+        return x[:crossover_point] + y[crossover_point:]
+
     def __vertical_two_point_crossover(self, x, y):
         crossover_point1 = random.randint(0, 8)
         crossover_point2 = random.randint(crossover_point1 + 1, 9)
         crossover_point1 = crossover_point1*9
         crossover_point2 = crossover_point2*9
-        return x[:crossover_point1] + y[crossover_point1:crossover_point2] + y[crossover_point2:]
+        return x[:crossover_point1] + y[crossover_point1:crossover_point2] + x[crossover_point2:]
 
     def crossover(self, x, y): 
-        m = 2 # number of methods
+        m = 3 # number of methods
 
         if random.uniform(0, 1) >= self.crossover_rate or self.crossover_type == None:
             return x # returns a individual from the current generation without doing the crossover 
@@ -345,6 +360,20 @@ class SudokuGeneticProblem(GeneticProblem):
         tmp = x[self.emptyArray[c1]]
         x[self.emptyArray[c1]] = x[self.emptyArray[c2]]
         x[self.emptyArray[c2]] = tmp
+        return x
+
+    def __horizontal_nswap_mutate(self, x):
+        # choose randomly which row its gonna pick to perform the swap
+        n = random.randrange(1, self._MAX_SWAP)
+        for _ in range(n):
+            row = random.randrange(0,9)
+            start_pos = np.searchsorted(self.emptyArray, 9*row) # the position on the empty array that the row starts
+            end_pos = np.searchsorted(self.emptyArray, 9*row + 9) # the position on the empty array that the row ends
+            c1 = random.randrange(start_pos, end_pos)
+            c2 = random.randrange(start_pos, end_pos)
+            tmp = x[self.emptyArray[c1]]
+            x[self.emptyArray[c1]] = x[self.emptyArray[c2]]
+            x[self.emptyArray[c2]] = tmp
         return x
 
     def mutate(self, x):
