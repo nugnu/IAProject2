@@ -72,14 +72,12 @@ class SudokuGeneticProblem(GeneticProblem):
     def __get_selection_dict(self):
         return {
             0: self.__tournament,
-            "tournament": self.__tournament,
-            1: self.__roulette,
-            "roulette": self.__roulette
+            "tournament": self.__tournament
         }
 
     def __get_replacement_dict(self):
         return {
-            "default": self.__default_replace,
+            "elitism_grow": self.__default_replace,
             0: self.__default_replace,
             "elitism": self.__elitism_replace,
             1: self.__elitism_replace
@@ -192,6 +190,9 @@ class SudokuGeneticProblem(GeneticProblem):
 
     # INIT POPULATION
 
+    def __getFitnesses(self):
+        return [self.fitness(individual) for individual in self.population]
+
     def __permutation_init(self):
         # every solution is a permutation of (1,2,3,4,5,6,7,8,9,1,2,3...)
         permutation = []
@@ -251,8 +252,8 @@ class SudokuGeneticProblem(GeneticProblem):
             self.init_dict[c]()
             return 
 
-        self.init_dict[self.init_type]()
-            
+        self.init_dict[self.init_type]()       
+   
     # SELECTION
     
     def __tournament(self, r):
@@ -267,13 +268,8 @@ class SudokuGeneticProblem(GeneticProblem):
             competitors.append(self.population[c])
         return max(competitors, key=self.fitness)
 
-    def __roulette(self, r):
-        fitnesses = map(self.fitness, self.population)
-        sampler = weighted_sampler(self.population, fitnesses)
-        return [sampler() for i in range(r)]
-
     def selection(self, r):
-        m = 2 # number of methods
+        m = 1 # number of methods
 
         if (self.selection_type == "all"):
             c = random.randrange(0, m)
@@ -418,10 +414,11 @@ class SudokuGeneticProblem(GeneticProblem):
 
         if  (self.replacement_type == "all"):
             c = random.randrange(0, m)
-            return self.replacement_dict[c](prev_fitness_individual)
+            self.replacement_dict[c](prev_fitness_individual)
+            return 
         
-        return self.replacement_dict[self.replacement_type](prev_fitness_individual)
-           
+        self.replacement_dict[self.replacement_type](prev_fitness_individual)
+            
     # STALE
 
     def kill_population(self, percent):
