@@ -167,16 +167,6 @@ class SudokuGeneticProblem(GeneticProblem):
 
     def __getBoxes(self, individual):
         return [self.__getBox(individual, i) for i in [0, 3, 6, 27, 30, 33, 54, 57, 60]]
-    
-    def __probability(self):
-        self.probabilities = []
-        minimum = self.MAX_FITNESS + 1
-        for i in self.population:
-            fitness = self.fitness(i)
-            if (fitness < minimum): minimum = fitness
-            self.probabilities.append(fitness/self.MAX_FITNESS)
-        minimum_prob = minimum/self.MAX_FITNESS
-        self.probabilities = [prob - minimum_prob for prob in self.probabilities]
 
     # GOAL TEST
 
@@ -280,6 +270,17 @@ class SudokuGeneticProblem(GeneticProblem):
         return 
 
     # SELECTION
+
+    def __probability(self): # roulette (used by init population and replace population -> calculate all probabilities (chances to be picked) for every individual in the population)
+        self.probabilities = []
+        minimum = self.MAX_FITNESS + 1
+        for i in self.population:
+            fitness = self.fitness(i)
+            if (fitness < minimum): minimum = fitness
+            self.probabilities.append(fitness/self.MAX_FITNESS)
+        minimum_prob = minimum/self.MAX_FITNESS
+        self.probabilities = [prob - minimum_prob for prob in self.probabilities] # normalize the array 
+
     def __roulette_pick(self, r):
         return [self.__roulette_pick_util() for i in range(r)]
 
