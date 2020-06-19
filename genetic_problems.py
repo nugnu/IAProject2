@@ -279,7 +279,8 @@ class SudokuGeneticProblem(GeneticProblem):
             if (fitness < minimum): minimum = fitness
             self.probabilities.append(fitness/self.MAX_FITNESS)
         minimum_prob = minimum/self.MAX_FITNESS
-        self.probabilities = [prob - minimum_prob for prob in self.probabilities] # normalize the array 
+        norm_factor = np.ceil(1/len(self.population) * 3500)
+        self.probabilities = [(prob - minimum_prob)**norm_factor for prob in self.probabilities] # normalize the array 
 
     def __roulette_pick(self, r):
         return [self.__roulette_pick_util() for i in range(r)]

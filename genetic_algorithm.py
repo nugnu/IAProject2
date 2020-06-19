@@ -10,9 +10,12 @@ from genetic_problems import *
 
 def genetic_algorithm(problem, verbose=True):
     start = time.time()
-    MIN_GEN_ITERATIONS = 175
-    MAX_STALE_FACTOR = 12
+    MAX_STALE_FACTOR = 12 
     MIN_STALE = 20
+    if (problem.selection_type == "roulette"):
+        # roulette converges much more quickly, but can lead to local maximum
+        MAX_STALE_FACTOR = 40
+        MIN_STALE = 10
     stale = 0
     problem.init_population()
     while True:
